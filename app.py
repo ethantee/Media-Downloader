@@ -14,12 +14,38 @@ import pandas as pd
 
 st.set_page_config(page_title="Media Downloader", page_icon="🎵")
 
+# Check for FFmpeg availability
+def is_ffmpeg_available():
+    try:
+        subprocess.run(['ffmpeg', '-version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return False
+
 st.title("Media Downloader")
 st.write("Download audio or video from various platforms")
 
-# Constants
-DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
-HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "download_history.json")
+# Set environment-specific paths
+is_deployed = os.environ.get('STREAMLIT_DEPLOYED', '') == 'true'
+if is_deployed:
+    # In deployed environment, use temp directory
+    DOWNLOAD_DIR = tempfile.gettempdir()
+    # Display message about download location
+    st.info("You are using the deployed version. Files will be available for download but not saved permanently.")
+else:
+    # In local environment, use user's Downloads folder
+    DOWNLOAD_DIR = os.path.join(os.path.expanduser("~"), "Downloads")
+
+# Show warning if FFmpeg is not available
+if not is_ffmpeg_available():
+    st.warning("FFmpeg is not available. Some features like audio extraction and subtitle embedding may not work. " 
+               "If you're using the deployed version, please contact the administrator.")
+
+# Set up history file path (try to use app directory, fallback to temp dir if needed)
+try:
+    HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "download_history.json")
+except Exception:
+    HISTORY_FILE = os.path.join(tempfile.gettempdir(), "download_history.json")
 
 # Initialize session state
 if 'previous_url' not in st.session_state:
@@ -36,18 +62,25 @@ url = st.text_input("Enter URL:", placeholder="https://www.youtube.com/watch?v=.
 def load_history():
     if os.path.exists(HISTORY_FILE):
         try:
-            with open(HISTORY_FILE, 'r') as f:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except json.JSONDecodeError:
+            return []
+        except Exception as e:
+            print(f"Error loading history: {str(e)}")
             return []
     return []
 
 # Function to save download history
 def save_to_history(entry):
-    history = load_history()
-    history.append(entry)
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-        json.dump(history, f, indent=2, ensure_ascii=False)
+    try:
+        history = load_history()
+        history.append(entry)
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        # Silent fail in deployed environment
+        print(f"Could not save download history: {str(e)}")
 
 # Function to format duration in HH:MM:SS.mmm format
 def format_duration(seconds):
@@ -280,9 +313,17 @@ if st.button("Download"):
     else:
         with st.spinner("Downloading..."):
             try:
-                # Use Downloads directory
-                download_path = os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s')
-                
+                # Set download path based on environment
+                if is_deployed:
+                    # For deployed version, use a temporary directory
+                    # with a simplified filename to avoid path issues
+                    file_timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    file_template = f'media_{file_timestamp}.%(ext)s'
+                    download_path = os.path.join(DOWNLOAD_DIR, file_template)
+                else:
+                    # For local version, use the regular path with full title
+                    download_path = os.path.join(DOWNLOAD_DIR, '%(title)s.%(ext)s')
+
                 if download_type == "Audio":
                     # Audio download logic
                     ydl_opts = {
@@ -375,6 +416,19 @@ if st.button("Download"):
                     st.write(f"Type: {os.path.splitext(file_name)[1][1:]}")
                     st.write(f"Duration: {duration_formatted}")
                     st.write(f"Bitrate: {bitrate} kbps")
+
+                    # After download, in deployed environment, provide download link
+                    if is_deployed and os.path.exists(downloaded_file):
+                        with open(downloaded_file, "rb") as file:
+                            file_name = os.path.basename(downloaded_file)
+                            # Create a download button for the user to get the file
+                            st.download_button(
+                                label="Download your file",
+                                data=file,
+                                file_name=file_name,
+                                mime=f'{"audio" if download_type == "Audio" else "video"}/{os.path.splitext(file_name)[1][1:]}'
+                            )
+                        st.info("In the deployed version, files aren't saved to your Downloads folder. Use the download button above to save the file to your device.")
                 else:
                     st.error("Download failed or file not found")
             

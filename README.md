@@ -15,9 +15,7 @@ A streamlined web application for downloading audio and video content from vario
 - **Metadata Inclusion**: Preserves metadata, thumbnails, and chapters from the original content
 - **Unicode Support**: Full support for international characters in titles and filenames
 - **Direct Downloads**: Files are saved directly to your Downloads folder
-- **Enhanced File Information**: View size, type, duration, and bitrate of downloaded files
-- **Download History**: Maintains a log of all downloaded media (for personal use)
-- **Performance Optimized**: Uses session state to minimize redundant operations
+- **File Information**: View size, type, duration, and bitrate of downloaded files
 
 ## How to Use
 
@@ -32,8 +30,8 @@ A streamlined web application for downloading audio and video content from vario
 ## Requirements
 
 - Python 3.11 or higher
-- Streamlit
-- yt-dlp
+- Streamlit (for the web interface)
+- yt-dlp (for downloading media)
 - FFmpeg (used for media processing)
 - Pillow (for image handling)
 - Requests (for fetching thumbnails)
@@ -41,9 +39,11 @@ A streamlined web application for downloading audio and video content from vario
 
 ## Installation
 
+### Option 1: Using pip (Traditional)
+
 ```bash
 # Clone the repository
-git clone [your-repository-url]
+git clone https://github.com/ethantee/Media-Downloader.git
 
 # Install dependencies
 pip install -r requirements.txt
@@ -52,14 +52,28 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Technical Details
+### Option 2: Using uv (Fast Python Package Manager)
 
-This application uses:
+```bash
+# Install uv globally
+pip install uv
 
-- **Streamlit** for the web interface
-- **yt-dlp** for downloading and processing media
-- **FFmpeg** for format conversion and embedding subtitles
-- **Pillow** for thumbnail image processing
-- **Requests** for fetching remote resources
-- **Pandas** for data formatting and display
-- **UTF-8 Encoding** for proper handling of international characters and symbols
+# Clone the repository 
+git clone https://github.com/ethantee/Media-Downloader.git
+cd Media-Downloader
+
+# Create a virtual environment
+uv venv
+
+# Activate the virtual environment
+# On Windows
+.\.venv\Scripts\activate
+# On macOS/Linux
+source .venv/bin/activate
+
+# Install dependencies
+uv pip install -r requirements.txt
+
+# Run the application
+streamlit run app.py
+```
