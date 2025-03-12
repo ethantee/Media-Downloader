@@ -1,0 +1,5 @@
+pandas
+pillow
+requests
+streamlit
+yt-dlp
